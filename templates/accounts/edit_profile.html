@@ -1,0 +1,143 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Edit Profile - CryptoForce{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white text-center py-3">
+                <h3 class="mb-0">Edit Your Profile</h3>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-3 text-center">
+                            <div class="mb-3">
+                                {% if user.avatar %}
+                                    <div class="avatar-container mb-3" style="width: 150px; height: 150px;">
+                                        <img src="{{ user.avatar.url }}" alt="{{ user.username }}" class="img-fluid rounded-circle" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                {% else %}
+                                    <div class="avatar-container bg-secondary d-flex align-items-center justify-content-center mb-3" style="width: 150px; height: 150px;">
+                                        <i class="fas fa-user fa-4x text-white"></i>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="mb-2">
+                                    <label for="id_avatar" class="form-label">Profile Picture</label>
+                                    {{ form.avatar }}
+                                    {% if form.avatar.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.avatar.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-text">Max size: 2MB. Square image recommended.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="mb-3">
+                                <label for="id_username" class="form-label">Username</label>
+                                <input type="text" id="id_username" class="form-control" value="{{ user.username }}" disabled>
+                                <div class="form-text">Username cannot be changed.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="id_email" class="form-label">Email</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.email.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="id_country" class="form-label">Country</label>
+                                {{ form.country }}
+                                {% if form.country.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.country.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="id_bio" class="form-label">Bio</label>
+                                {{ form.bio }}
+                                {% if form.bio.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.bio.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Write a short bio to tell others about yourself.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-top pt-3 mb-3">
+                        <div class="mb-3">
+                            <label for="id_current_password" class="form-label">Current Password</label>
+                            {{ form.current_password }}
+                            {% if form.current_password.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.current_password.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Enter your current password to confirm changes.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <a href="{% url 'crypto_force_app:profile' %}" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-arrow-left me-1"></i> Back to Profile
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-save me-1"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Change Password Section -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-warning text-dark text-center py-3">
+                <h3 class="mb-0">Change Password</h3>
+            </div>
+            <div class="card-body p-4 text-center">
+                <p>To change your password, click the button below.</p>
+                <a href="{% url 'crypto_force_app:change_password' %}" class="btn btn-warning">
+                    <i class="fas fa-key me-1"></i> Change Password
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

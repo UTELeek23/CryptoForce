@@ -1,0 +1,345 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ problem.title }} - CryptoForce{% endblock %}
+
+{% block extra_css %}
+<style>
+    .description-content {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+    }
+    .submission-history-item {
+        transition: all 0.2s;
+    }
+    .submission-history-item:hover {
+        background-color: rgba(0,0,0,0.03);
+    }
+    .flag-input {
+        font-family: monospace;
+    }
+    .hint-card {
+        border-left: 4px solid #6c757d;
+    }
+    pre {
+        background-color: #2d2d2d;
+        color: #f8f8f2;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+    }
+    code {
+        font-family: 'Courier New', Courier, monospace;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Navigation buttons -->
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'crypto_force_app:problem_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Problems
+            </a>
+            {% if user.is_staff or user.is_problem_setter %}
+                <div>
+                    <a href="{% url 'crypto_force_app:edit_problem' problem.id %}" class="btn btn-outline-warning me-2">
+                        <i class="fas fa-edit me-1"></i>Edit Problem
+                    </a>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteProblemModal">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Problem Header -->
+    <div class="col-12 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start">
+                    <div>
+                        <div class="d-flex align-items-center mb-3">
+                            <h1 class="mb-0 me-3">{{ problem.title }}</h1>
+                            <span class="badge bg-{% if problem.difficulty_level == 'EASY' %}success{% elif problem.difficulty_level == 'MEDIUM' %}warning{% elif problem.difficulty_level == 'HARD' %}danger{% else %}secondary{% endif %} px-3 py-2">
+                                {{ problem.difficulty_level }}
+                            </span>
+                            {% if problem in user.solved_problems.all %}
+                                <span class="badge bg-success ms-2 px-3 py-2">
+                                    <i class="fas fa-check-circle me-1"></i>Solved
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge bg-light text-dark border">
+                                <i class="fas fa-tag me-1"></i>{{ problem.category }}
+                            </span>
+                            <span class="badge bg-light text-dark border">
+                                <i class="fas fa-users me-1"></i>{{ problem.get_solve_count }} solves
+                            </span>
+                            <span class="badge bg-light text-dark border">
+                                <i class="fas fa-trophy me-1"></i>{{ problem.points }} points
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {% if contest %}
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-trophy me-2"></i>This problem is part of the 
+                            <a href="#" class="alert-link">{{ contest.title }}</a> contest
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Problem Content and Submission -->
+    <div class="col-lg-8 mb-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header py-3 bg-white">
+                <h5 class="m-0 fw-bold">Problem Description</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="description-content">
+                    {{ problem.description|safe }}
+                </div>
+                
+                {% if attachments %}
+                    <div class="mt-4">
+                        <h6 class="mb-3">Attachments</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for attachment in attachments %}
+                                <a href="{{ attachment.file.url }}" class="btn btn-outline-secondary" download>
+                                    <i class="fas fa-download me-2"></i>{{ attachment.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Submit solution -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header py-3 bg-white">
+                <h5 class="m-0 fw-bold">Submit Solution</h5>
+            </div>
+            <div class="card-body p-4">
+                {% if problem in user.solved_problems.all %}
+                    <div class="alert alert-success mb-4">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Congratulations!</strong> You've already solved this problem.
+                    </div>
+                {% endif %}
+                
+                <form method="post" action="{% url 'crypto_force_app:submit_solution' problem.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="flagInput" class="form-label">Flag</label>
+                        <input type="text" class="form-control flag-input" id="flagInput" name="submitted_flag" placeholder="crypto_force{...}" required>
+                        <div class="form-text">
+                            Enter the flag in the required format. Usually something like <code>crypto_force{...}</code>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>Submit Flag
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Submission History -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header py-3 bg-white">
+                <h5 class="m-0 fw-bold">Your Submission History</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if user_submissions %}
+                    <div class="list-group list-group-flush">
+                        {% for submission in user_submissions %}
+                            <div class="list-group-item submission-history-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="d-flex align-items-center">
+                                            {% if submission.is_correct %}
+                                                <span class="text-success me-2"><i class="fas fa-check-circle"></i></span>
+                                                <span class="fw-bold text-success">Correct</span>
+                                            {% else %}
+                                                <span class="text-danger me-2"><i class="fas fa-times-circle"></i></span>
+                                                <span class="fw-bold text-danger">Incorrect</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small text-muted mt-1">
+                                            {{ submission.submission_time|date:"M d, Y" }} at {{ submission.submission_time|time:"H:i" }}
+                                        </div>
+                                    </div>
+                                    {% if submission.is_correct and submission.elo_change %}
+                                        <div>
+                                            <span class="badge bg-success">
+                                                +{{ submission.elo_change }} ELO
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-2">
+                                    <code class="small">{{ submission.submitted_flag }}</code>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-history fa-3x mb-3 text-muted"></i>
+                        <p class="mb-0">No submissions yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Hints -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header py-3 bg-white">
+                <h5 class="m-0 fw-bold">Hints</h5>
+            </div>
+            <div class="card-body p-3">
+                {% if hints %}
+                    <div class="accordion" id="hintsAccordion">
+                        {% for hint in hints %}
+                            <div class="card hint-card mb-2 border-0">
+                                <div class="card-header bg-light" id="headingHint{{ forloop.counter }}">
+                                    <h2 class="mb-0">
+                                        <button class="btn btn-link btn-block text-left text-decoration-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHint{{ forloop.counter }}" aria-expanded="false" aria-controls="collapseHint{{ forloop.counter }}">
+                                            <i class="fas fa-lightbulb me-2"></i>Hint #{{ forloop.counter }}
+                                            {% if hint.cost > 0 %}
+                                                <span class="badge bg-warning text-dark">-{{ hint.cost }} points</span>
+                                            {% endif %}
+                                        </button>
+                                    </h2>
+                                </div>
+                                <div id="collapseHint{{ forloop.counter }}" class="collapse" aria-labelledby="headingHint{{ forloop.counter }}" data-bs-parent="#hintsAccordion">
+                                    <div class="card-body">
+                                        {% if hint.is_unlocked %}
+                                            {{ hint.content|safe }}
+                                        {% else %}
+                                            <div class="text-center">
+                                                <p>This hint will cost you {{ hint.cost }} points. Your current score will be reduced by this amount.</p>
+                                                <form method="post" action="{% url 'crypto_force_app:unlock_hint' hint.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-warning">
+                                                        <i class="fas fa-unlock me-1"></i>Unlock Hint
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-info-circle fa-2x mb-3 text-muted"></i>
+                        <p class="mb-0">No hints available for this problem</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header py-3 bg-white">
+                <h5 class="m-0 fw-bold">Problem Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Solved Rate</span>
+                        <span>{{ solve_percentage|default:"0" }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ solve_percentage|default:'0' }}%" aria-valuenow="{{ solve_percentage|default:'0' }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="p-3 border rounded mb-2">
+                            <i class="fas fa-trophy text-warning mb-2 fa-2x"></i>
+                            <h6 class="m-0">{{ problem.points }}</h6>
+                            <small class="text-muted">Points</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 border rounded mb-2">
+                            <i class="fas fa-users text-primary mb-2 fa-2x"></i>
+                            <h6 class="m-0">{{ problem.get_solve_count }}</h6>
+                            <small class="text-muted">Solves</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <h6 class="mt-4 mb-3">First Solvers</h6>
+                {% if first_solvers %}
+                    <div class="list-group list-group-flush">
+                        {% for solver in first_solvers %}
+                            <div class="list-group-item border-0 p-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        {% if solver.user.avatar %}
+                                            <img src="{{ solver.user.avatar.url }}" alt="{{ solver.user.username }}" class="rounded-circle" width="30" height="30">
+                                        {% else %}
+                                            <span class="avatar-placeholder rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                                                {{ solver.user.username|first|upper }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <a href="{% url 'crypto_force_app:user_profile' solver.user.username %}" class="fw-bold text-decoration-none">{{ solver.user.username }}</a>
+                                        <div class="small text-muted">{{ solver.submission_time|date:"M d, Y H:i" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <p class="text-muted mb-0">No one has solved this problem yet. Be the first!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Problem Modal -->
+{% if user.is_staff or user.is_problem_setter %}
+<div class="modal fade" id="deleteProblemModal" tabindex="-1" aria-labelledby="deleteProblemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteProblemModalLabel">Delete Problem</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the problem <strong>{{ problem.title }}</strong>?</p>
+                <p class="text-danger">This action cannot be undone and will remove all related submissions and data.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'crypto_force_app:delete_problem' problem.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Problem</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,323 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{% if action == 'Edit' %}Edit{% else %}Create{% endif %} Problem - CryptoForce{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .hint-card {
+        border-left: 4px solid #6c757d;
+        margin-bottom: 1rem;
+    }
+    /* CKEditor styles */
+    .django-ckeditor-widget {
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Navigation buttons -->
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'crypto_force_app:problem_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Problems
+            </a>
+            {% if action == 'Edit' %}
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteProblemModal">
+                    <i class="fas fa-trash me-1"></i>Delete Problem
+                </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Form Header -->
+    <div class="col-12 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="mb-0">{% if action == 'Edit' %}Edit{% else %}Create{% endif %} Problem</h1>
+                <p class="text-muted mt-2 mb-0">
+                    {% if action == 'Edit' %}
+                        Update the details of the existing problem.
+                    {% else %}
+                        Design a new challenge for the CryptoForce platform.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Problem Form -->
+    <div class="col-lg-8 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header py-3 bg-white">
+                <h5 class="m-0 fw-bold">Problem Details</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" id="problemForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Info Section -->
+                    <div class="form-section">
+                        <h6 class="mb-3">Basic Information</h6>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">Problem Title</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger mt-1">
+                                    {{ form.title.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+                                    {{ form.category }}
+                                    <div class="form-text">E.g. Cryptography, Web Exploitation, Forensics</div>
+                                    {% if form.category.errors %}
+                                        <div class="text-danger mt-1">
+                                            {{ form.category.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.difficulty_level.id_for_label }}" class="form-label">Difficulty Level</label>
+                                    {{ form.difficulty_level }}
+                                    {% if form.difficulty_level.errors %}
+                                        <div class="text-danger mt-1">
+                                            {{ form.difficulty_level.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.points.id_for_label }}" class="form-label">Points</label>
+                                    {{ form.points }}
+                                    <div class="form-text">Points awarded for solving this problem</div>
+                                    {% if form.points.errors %}
+                                        <div class="text-danger mt-1">
+                                            {{ form.points.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.difficulty.id_for_label }}" class="form-label">Difficulty Rating (ELO)</label>
+                                    {{ form.difficulty }}
+                                    <div class="form-text">Higher values mean more difficult</div>
+                                    {% if form.difficulty.errors %}
+                                        <div class="text-danger mt-1">
+                                            {{ form.difficulty.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    Active (visible to users)
+                                </label>
+                            </div>
+                            {% if form.is_active.errors %}
+                                <div class="text-danger mt-1">
+                                    {{ form.is_active.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Problem Description -->
+                    <div class="form-section">
+                        <h6 class="mb-3">Problem Description</h6>
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description }}
+                            <div class="form-text">Use the rich text editor to format your problem description</div>
+                            {% if form.description.errors %}
+                                <div class="text-danger mt-1">
+                                    {{ form.description.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- File attachments would go here -->
+                        <div class="mb-3">
+                            <label class="form-label">Attachments</label>
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle me-2"></i>
+                                File attachment functionality will be added soon. For now, please include any necessary files as links in the description.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Solution & Flag -->
+                    <div class="form-section">
+                        <h6 class="mb-3">Solution & Flag</h6>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.flag.id_for_label }}" class="form-label">Flag</label>
+                            {{ form.flag }}
+                            <div class="form-text">The flag that users must submit to solve the problem (e.g., crypto_force{flag_text})</div>
+                            {% if form.flag.errors %}
+                                <div class="text-danger mt-1">
+                                    {{ form.flag.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.solution.id_for_label }}" class="form-label">Solution/Writeup (Staff Only)</label>
+                            {{ form.solution }}
+                            <div class="form-text">Provide a solution or writeup for admin reference. This will not be shown to users.</div>
+                            {% if form.solution.errors %}
+                                <div class="text-danger mt-1">
+                                    {{ form.solution.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i>{% if action == 'Edit' %}Update{% else %}Create{% endif %} Problem
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Problem Creation Tips -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header py-3 bg-white">
+                <h5 class="m-0 fw-bold">Tips for Problem Creation</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6 class="mb-2"><i class="fas fa-lightbulb text-warning me-2"></i>Problem Difficulty</h6>
+                    <p class="small text-muted mb-0">
+                        <strong>Easy:</strong> Suitable for beginners, introduces basic concepts.<br>
+                        <strong>Medium:</strong> Requires knowledge of common techniques.<br>
+                        <strong>Hard:</strong> Complex problems requiring deep understanding.<br>
+                        <strong>Expert:</strong> Advanced challenges for experienced users.
+                    </p>
+                </div>
+                
+                <div class="mb-4">
+                    <h6 class="mb-2"><i class="fas fa-pen-fancy text-primary me-2"></i>Writing Good Descriptions</h6>
+                    <ul class="small text-muted mb-0">
+                        <li>Provide a clear narrative or context</li>
+                        <li>Include all necessary information</li>
+                        <li>Use hints carefully to guide without giving away solutions</li>
+                        <li>Format code and commands properly</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-4">
+                    <h6 class="mb-2"><i class="fas fa-flag text-success me-2"></i>Flag Format</h6>
+                    <p class="small text-muted mb-0">
+                        Use the standard format: <code>crypto_force{flag_text}</code><br>
+                        Make flags challenging but not impossible to guess.
+                    </p>
+                </div>
+                
+                <div>
+                    <h6 class="mb-2"><i class="fas fa-check-circle text-info me-2"></i>Before Publishing</h6>
+                    <ul class="small text-muted mb-0">
+                        <li>Test your problem thoroughly</li>
+                        <li>Have another admin review it</li>
+                        <li>Check flag submission works correctly</li>
+                        <li>Verify all required files are included</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hints Management -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header py-3 bg-white">
+                <h5 class="m-0 fw-bold">Hints Management</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Hint management will be implemented soon. After creating the problem, you'll be able to add hints.
+                </div>
+                
+                {% if action == 'Edit' %}
+                    <!-- Placeholder for future hint management -->
+                    <div id="hintsContainer">
+                        <!-- Hints would be listed here -->
+                    </div>
+                    
+                    <!-- Placeholder for future hint form -->
+                    <form id="hintForm" class="mt-3 d-none">
+                        <div class="mb-3">
+                            <label class="form-label">Hint Content</label>
+                            <textarea class="form-control" rows="3" placeholder="Enter hint content..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Point Cost</label>
+                            <input type="number" class="form-control" placeholder="10" min="0" max="100">
+                            <div class="form-text">Cost for users to unlock this hint</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Hint</button>
+                    </form>
+                {% else %}
+                    <p class="text-muted small">
+                        You'll be able to add hints after creating the problem.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Problem Modal (for Edit mode) -->
+{% if action == 'Edit' %}
+<div class="modal fade" id="deleteProblemModal" tabindex="-1" aria-labelledby="deleteProblemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteProblemModalLabel">Delete Problem</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the problem <strong>{{ problem.title }}</strong>?</p>
+                <p class="text-danger">This action cannot be undone and will remove all related submissions and data.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'crypto_force_app:delete_problem' problem.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Problem</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

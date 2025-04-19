@@ -1,0 +1,165 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Home - CryptoForce{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Hero Section -->
+    <div class="col-12 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-5 text-center">
+                <h1 class="display-4 fw-bold mb-3">Welcome to CryptoForce</h1>
+                <p class="lead mb-4">A competitive Capture The Flag platform for cybersecurity enthusiasts.</p>
+                {% if not user.is_authenticated %}
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'crypto_force_app:register' %}" class="btn btn-primary btn-lg">Get Started</a>
+                    <a href="{% url 'crypto_force_app:login' %}" class="btn btn-outline-secondary btn-lg">Sign In</a>
+                </div>
+                {% else %}
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="#contests" class="btn btn-primary btn-lg">Ongoing Contests</a>
+                    <a href="#problems" class="btn btn-outline-secondary btn-lg">Practice Problems</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Contests -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h3 class="card-title mb-0">Upcoming Contests</h3>
+            </div>
+            <div class="card-body">
+                {% if upcoming_contests %}
+                    <div class="list-group list-group-flush">
+                        {% for contest in upcoming_contests %}
+                            <div class="list-group-item px-0 py-3 border-0 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-1">{{ contest.title }}</h5>
+                                    <span class="badge bg-info">{{ contest.start_time|date:"M d, H:i" }}</span>
+                                </div>
+                                <p class="mb-1 text-muted">{{ contest.description|truncatewords:20 }}</p>
+                                <a href="#contest/{{ contest.id }}" class="btn btn-sm btn-outline-primary mt-2">Details</a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-alt fa-3x mb-3 text-muted"></i>
+                        <p class="mb-0">No upcoming contests at the moment.</p>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white">
+                <a href="#contests" class="btn btn-outline-primary w-100">View All Contests</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h3 class="card-title mb-0">Top Performers</h3>
+            </div>
+            <div class="card-body">
+                {% if top_users %}
+                    <div class="list-group list-group-flush">
+                        {% for user in top_users %}
+                            {% if not user.is_staff %}
+                            <div class="list-group-item px-0 py-3 border-0 border-bottom d-flex align-items-center">
+                                <div class="me-3 text-center" style="width: 30px">
+                                    <span class="fw-bold">{{ forloop.counter }}</span>
+                                </div>
+                                <div class="d-flex align-items-center flex-grow-1">
+                                    {% if user.avatar %}
+                                        <img src="{{ user.avatar.url }}" alt="{{ user.username }}" class="rounded-circle me-2" style="width: 36px; height: 36px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="rounded-circle bg-secondary text-white me-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-semibold">{{ user.username }}</div>
+                                        <div class="small text-muted">{{ user.country }}</div>
+                                    </div>
+                                </div>
+                                <div class="ms-auto">
+                                    <span class="badge" style="background-color: {{ user.rank.color_code }}">{{ user.rank.name }}</span>
+                                    <div class="fw-bold">{{ user.elo }}</div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-trophy fa-3x mb-3 text-muted"></i>
+                        <p class="mb-0">No users on the leaderboard yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white">
+                <a href="{% url 'crypto_force_app:leaderboard' %}" class="btn btn-outline-success w-100">Full Leaderboard</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent CTF Problems -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h3 class="card-title mb-0">Recent Problems</h3>
+            </div>
+            <div class="card-body">
+                {% if recent_problems %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Problem</th>
+                                    <th>Category</th>
+                                    <th>Difficulty</th>
+                                    <th>Solves</th>
+                                    <th>Points</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for problem in recent_problems %}
+                                    <tr>
+                                        <td>{{ problem.title }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ problem.category }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if problem.difficulty_level == 'EASY' %}success{% elif problem.difficulty_level == 'MEDIUM' %}warning{% elif problem.difficulty_level == 'HARD' %}danger{% else %}dark{% endif %}">
+                                                {{ problem.difficulty_level }}
+                                            </span>
+                                        </td>
+                                        <td>{{ problem.get_solve_count }}</td>
+                                        <td>{{ problem.points }}</td>
+                                        <td>
+                                            <a href="#problem/{{ problem.id }}" class="btn btn-sm btn-outline-primary">Solve</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-puzzle-piece fa-3x mb-3 text-muted"></i>
+                        <p class="mb-0">No problems available yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white">
+                <a href="#problems" class="btn btn-outline-info w-100">Browse All Problems</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

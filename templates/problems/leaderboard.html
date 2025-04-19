@@ -1,0 +1,278 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Leaderboard - CryptoForce{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rank-badge {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .rank-1 {
+        background-color: #FFD700;
+        color: #212529;
+    }
+    .rank-2 {
+        background-color: #C0C0C0;
+        color: #212529;
+    }
+    .rank-3 {
+        background-color: #CD7F32;
+        color: #fff;
+    }
+    .rank-other {
+        background-color: #6c757d;
+        color: #fff;
+    }
+    .user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    .table-hover tbody tr:hover {
+        background-color: rgba(0,0,0,0.03);
+    }
+    .badge-category {
+        background-color: #e9ecef;
+        color: #495057;
+        font-weight: normal;
+    }
+    .filter-card {
+        border-radius: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h1 class="mb-1">Leaderboard</h1>
+                        <p class="text-muted mb-0">
+                            Top performers on CryptoForce ranked by ELO rating
+                        </p>
+                    </div>
+                    <div class="d-flex">
+                        <div class="dropdown me-2">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="timeRangeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                {{ time_range|default:"All Time" }}
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="timeRangeDropdown">
+                                <li><a class="dropdown-item {% if time_range == 'All Time' %}active{% endif %}" href="?time_range=All Time">All Time</a></li>
+                                <li><a class="dropdown-item {% if time_range == 'This Month' %}active{% endif %}" href="?time_range=This Month">This Month</a></li>
+                                <li><a class="dropdown-item {% if time_range == 'This Week' %}active{% endif %}" href="?time_range=This Week">This Week</a></li>
+                                <li><a class="dropdown-item {% if time_range == 'Today' %}active{% endif %}" href="?time_range=Today">Today</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortByDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                Sort: {{ sort_by|default:"ELO" }}
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="sortByDropdown">
+                                <li><a class="dropdown-item {% if sort_by == 'ELO' %}active{% endif %}" href="?sort_by=ELO">ELO</a></li>
+                                <li><a class="dropdown-item {% if sort_by == 'Problems Solved' %}active{% endif %}" href="?sort_by=Problems Solved">Problems Solved</a></li>
+                                <li><a class="dropdown-item {% if sort_by == 'Points' %}active{% endif %}" href="?sort_by=Points">Points</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3 mb-4">
+        <div class="card border-0 shadow-sm filter-card">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">Filters</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'crypto_force_app:leaderboard' %}">
+                    <!-- Category Filter -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold mb-2">Category</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <input type="radio" class="btn-check" name="category" id="category-all" autocomplete="off" value="" {% if not category %}checked{% endif %}>
+                            <label class="btn btn-sm btn-outline-secondary" for="category-all">All</label>
+                            
+                            {% for cat in categories %}
+                                <input type="radio" class="btn-check" name="category" id="category-{{ cat.id }}" autocomplete="off" value="{{ cat.id }}" {% if category == cat.id|stringformat:"i" %}checked{% endif %}>
+                                <label class="btn btn-sm btn-outline-secondary" for="category-{{ cat.id }}">{{ cat.name }}</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Country Filter -->
+                    <div class="mb-3">
+                        <label for="country" class="form-label fw-bold mb-2">Country</label>
+                        <select name="country" id="country" class="form-select">
+                            <option value="">All Countries</option>
+                            {% for country_code, country_name in countries %}
+                                <option value="{{ country_code }}" {% if country == country_code %}selected{% endif %}>{{ country_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Search by Username -->
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-bold mb-2">Username</label>
+                        <input type="text" name="username" id="username" class="form-control" placeholder="Search by username" value="{{ username|default:'' }}">
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        <a href="{% url 'crypto_force_app:leaderboard' %}" class="btn btn-outline-secondary">Clear Filters</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leaderboard Table -->
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Rank</th>
+                                <th>User</th>
+                                <th>ELO</th>
+                                <th>Solved</th>
+                                <th>Points</th>
+                                <th class="pe-4">Last Active</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                                <tr {% if user == request.user %}class="table-primary"{% endif %}>
+                                    <td class="ps-4">
+                                        <div class="rank-badge {% if forloop.counter == 1 %}rank-1{% elif forloop.counter == 2 %}rank-2{% elif forloop.counter == 3 %}rank-3{% else %}rank-other{% endif %}">
+                                            {{ forloop.counter }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if user.avatar %}
+                                                <img src="{{ user.avatar.url }}" alt="{{ user.username }}" class="user-avatar me-2">
+                                            {% else %}
+                                                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random" alt="{{ user.username }}" class="user-avatar me-2">
+                                            {% endif %}
+                                            <div>
+                                                <a href="{% url 'crypto_force_app:user_profile' user.username %}" class="fw-bold mb-0 text-decoration-none">{{ user.username }}</a>
+                                                <div>
+                                                    {% if user.country %}
+                                                        <span class="badge bg-light text-dark me-1">{{ user.get_country_display }}</span>
+                                                    {% endif %}
+                                                    {% if user.title %}
+                                                        <span class="badge bg-info text-dark">{{ user.title }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ user.elo }}</div>
+                                        {% if user.elo_change %}
+                                            <small class="{% if user.elo_change > 0 %}text-success{% elif user.elo_change < 0 %}text-danger{% endif %}">
+                                                {% if user.elo_change > 0 %}+{% endif %}{{ user.elo_change }}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ user.solved_count }}
+                                    </td>
+                                    <td>
+                                        {{ user.points }}
+                                    </td>
+                                    <td class="pe-4">
+                                        <span title="{{ user.last_active|date:'F j, Y, g:i a' }}">
+                                            {{ user.last_active|timesince }} ago
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <div class="my-4 text-muted">
+                                            <i class="fas fa-trophy fa-3x mb-3"></i>
+                                            <p>No users found matching your filters</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            {% if users.has_other_pages %}
+                <div class="card-footer bg-white py-3">
+                    <nav aria-label="Leaderboard pagination">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if users.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.country %}&country={{ request.GET.country }}{% endif %}{% if request.GET.username %}&username={{ request.GET.username }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}{% if request.GET.time_range %}&time_range={{ request.GET.time_range }}{% endif %}">First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ users.previous_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.country %}&country={{ request.GET.country }}{% endif %}{% if request.GET.username %}&username={{ request.GET.username }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}{% if request.GET.time_range %}&time_range={{ request.GET.time_range }}{% endif %}">Previous</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">First</span>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link">Previous</span>
+                                </li>
+                            {% endif %}
+                            
+                            {% for i in users.paginator.page_range %}
+                                {% if users.number == i %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ i }}</span>
+                                    </li>
+                                {% elif i > users.number|add:'-3' and i < users.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ i }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.country %}&country={{ request.GET.country }}{% endif %}{% if request.GET.username %}&username={{ request.GET.username }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}{% if request.GET.time_range %}&time_range={{ request.GET.time_range }}{% endif %}">{{ i }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if users.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ users.next_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.country %}&country={{ request.GET.country }}{% endif %}{% if request.GET.username %}&username={{ request.GET.username }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}{% if request.GET.time_range %}&time_range={{ request.GET.time_range }}{% endif %}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ users.paginator.num_pages }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.country %}&country={{ request.GET.country }}{% endif %}{% if request.GET.username %}&username={{ request.GET.username }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}{% if request.GET.time_range %}&time_range={{ request.GET.time_range }}{% endif %}">Last</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Next</span>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link">Last</span>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

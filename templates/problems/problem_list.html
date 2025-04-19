@@ -1,0 +1,354 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Problems - CryptoForce{% endblock %}
+
+{% block extra_css %}
+<style>
+    .problem-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        overflow: hidden;
+    }
+    .problem-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
+    }
+    .problem-card.solved {
+        border-left: 4px solid #28a745;
+    }
+    .category-badge {
+        transition: all 0.2s ease;
+    }
+    .category-badge:hover {
+        transform: scale(1.05);
+    }
+    .filter-item {
+        cursor: pointer;
+    }
+    .filter-item.active {
+        background-color: rgba(78, 115, 223, 0.1);
+        color: #4e73df;
+        font-weight: 500;
+    }
+    .problem-header {
+        background-image: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+        color: white;
+        border-radius: 0.5rem 0.5rem 0 0;
+        padding: 2rem;
+    }
+    .badge-difficulty-EASY {
+        background-color: #28a745;
+    }
+    .badge-difficulty-MEDIUM {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    .badge-difficulty-HARD {
+        background-color: #dc3545;
+    }
+    .search-container {
+        max-width: 500px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Problem Header -->
+    <div class="col-12 mb-4">
+        <div class="card border-0 shadow">
+            <div class="problem-header">
+                <div class="row align-items-center">
+                    <div class="col-lg-7 mb-3 mb-lg-0">
+                        <h1 class="mb-2">CryptoForce Problems</h1>
+                        <p class="mb-0 opacity-75">Test your cybersecurity skills with our challenges</p>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="search-container ms-lg-auto">
+                            <form method="get" action="{% url 'crypto_force_app:problem_list' %}" class="d-flex">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search problems..." name="search" value="{{ search_query|default:'' }}">
+                                    <button class="btn btn-light" type="submit"><i class="fas fa-search"></i></button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if user.is_authenticated %}
+                <div class="row mt-4">
+                    <div class="col-lg-6">
+                        <div class="d-flex align-items-center">
+                            <div class="me-4">
+                                <div class="d-flex align-items-center">
+                                    <h2 class="h5 mb-0 me-2">Your Progress:</h2>
+                                    <div>
+                                        <span class="fw-bold text-white">{{ user.solved_problems.count }}</span>
+                                        <span class="text-white-50">/ {{ total_problems }}</span>
+                                    </div>
+                                </div>
+                                <div class="progress mt-2" style="height: 10px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ user_progress_percentage }}%;" aria-valuenow="{{ user_progress_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <a href="{% url 'crypto_force_app:leaderboard' %}" class="btn btn-outline-light btn-sm">
+                                    <i class="fas fa-trophy me-1"></i>View Leaderboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% if user.is_staff or user.is_problem_setter %}
+                    <div class="col-lg-6 text-lg-end mt-3 mt-lg-0">
+                        <a href="{% url 'crypto_force_app:create_problem' %}" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>Create Problem
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3 mb-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="m-0 font-weight-bold">Filters</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'crypto_force_app:problem_list' %}" class="list-group-item list-group-item-action filter-item {% if not category_filter and not difficulty_filter and not solved_filter %}active{% endif %}">
+                        <i class="fas fa-list-ul me-2"></i>All Problems
+                        <span class="badge bg-secondary float-end">{{ total_problems }}</span>
+                    </a>
+                    
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'crypto_force_app:problem_list' %}?solved=true" class="list-group-item list-group-item-action filter-item {% if solved_filter == 'true' %}active{% endif %}">
+                        <i class="fas fa-check-circle me-2 text-success"></i>Solved
+                        <span class="badge bg-success float-end">{{ user.solved_problems.count }}</span>
+                    </a>
+                    <a href="{% url 'crypto_force_app:problem_list' %}?solved=false" class="list-group-item list-group-item-action filter-item {% if solved_filter == 'false' %}active{% endif %}">
+                        <i class="fas fa-times-circle me-2 text-danger"></i>Unsolved
+                        <span class="badge bg-danger float-end">{{ unsolved_count }}</span>
+                    </a>
+                    {% endif %}
+
+                    <div class="p-3 border-top">
+                        <h6 class="mb-2">Difficulty</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{% url 'crypto_force_app:problem_list' %}?difficulty=EASY{% if category_filter %}&category={{ category_filter }}{% endif %}" class="badge {% if difficulty_filter == 'EASY' %}bg-success{% else %}bg-light text-dark border{% endif %} px-3 py-2 text-decoration-none">
+                                Easy
+                            </a>
+                            <a href="{% url 'crypto_force_app:problem_list' %}?difficulty=MEDIUM{% if category_filter %}&category={{ category_filter }}{% endif %}" class="badge {% if difficulty_filter == 'MEDIUM' %}bg-warning{% else %}bg-light text-dark border{% endif %} px-3 py-2 text-decoration-none">
+                                Medium
+                            </a>
+                            <a href="{% url 'crypto_force_app:problem_list' %}?difficulty=HARD{% if category_filter %}&category={{ category_filter }}{% endif %}" class="badge {% if difficulty_filter == 'HARD' %}bg-danger{% else %}bg-light text-dark border{% endif %} px-3 py-2 text-decoration-none">
+                                Hard
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 border-top">
+                        <h6 class="mb-2">Categories</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for category in all_categories %}
+                                <a href="{% url 'crypto_force_app:problem_list' %}?category={{ category }}{% if difficulty_filter %}&difficulty={{ difficulty_filter }}{% endif %}" class="badge {% if category_filter == category %}bg-primary{% else %}bg-light text-dark border{% endif %} category-badge px-3 py-2 text-decoration-none">
+                                    {{ category }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Statistics -->
+        {% if user.is_authenticated %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="m-0 font-weight-bold">Your Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="p-3 border rounded">
+                            <h3 class="h5 mb-1">{{ user.elo }}</h3>
+                            <small class="text-muted">ELO Points</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="p-3 border rounded">
+                            <h3 class="h5 mb-1">{{ user.solved_problems.count }}</h3>
+                            <small class="text-muted">Solved</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-6">
+                        <div class="p-3 border rounded">
+                            <h3 class="h5 mb-1">{{ user_rank|default:"N/A" }}</h3>
+                            <small class="text-muted">Rank</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 border rounded">
+                            <h3 class="h5 mb-1">{{ user_activity_streak|default:"0" }}</h3>
+                            <small class="text-muted">Day Streak</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{% url 'crypto_force_app:user_profile' user.username %}" class="btn btn-outline-primary">
+                        <i class="fas fa-user-circle me-1"></i>View Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Problem List -->
+    <div class="col-lg-9">
+        {% if problems %}
+            <div class="row">
+                {% for problem in problems %}
+                    <div class="col-md-6 col-xl-4 mb-4">
+                        <div class="card problem-card h-100 border-0 shadow-sm {% if user.is_authenticated and problem in user.solved_problems.all %}solved{% endif %}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="badge badge-difficulty-{{ problem.difficulty_level }} px-3 py-2">
+                                        {{ problem.difficulty_level }}
+                                    </span>
+                                    {% if user.is_authenticated and problem in user.solved_problems.all %}
+                                        <span class="badge bg-success px-3 py-2">
+                                            <i class="fas fa-check-circle me-1"></i>Solved
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                <h5 class="card-title mb-3">{{ problem.title }}</h5>
+                                
+                                <div class="mb-3">
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="fas fa-tag me-1"></i>{{ problem.category }}
+                                    </span>
+                                </div>
+                                
+                                <p class="card-text text-muted mb-4">
+                                    {{ problem.short_description|truncatechars:100 }}
+                                </p>
+                                
+                                <div class="d-flex justify-content-between align-items-center mt-auto">
+                                    <div>
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="fas fa-trophy me-1"></i>{{ problem.points }} pts
+                                        </span>
+                                        <span class="badge bg-light text-dark border ms-1">
+                                            <i class="fas fa-users me-1"></i>{{ problem.get_solve_count }}
+                                        </span>
+                                    </div>
+                                    <a href="{% url 'crypto_force_app:problem_detail' problem.id %}" class="btn btn-sm btn-primary">
+                                        Solve <i class="fas fa-arrow-right ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if problems.has_other_pages %}
+                <div class="d-flex justify-content-center mt-4">
+                    <nav aria-label="Problem pagination">
+                        <ul class="pagination">
+                            {% if problems.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if difficulty_filter %}&difficulty={{ difficulty_filter }}{% endif %}{% if solved_filter %}&solved={{ solved_filter }}{% endif %}" aria-label="First">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ problems.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if difficulty_filter %}&difficulty={{ difficulty_filter }}{% endif %}{% if solved_filter %}&solved={{ solved_filter }}{% endif %}" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="First">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for i in problems.paginator.page_range %}
+                                {% if problems.number == i %}
+                                    <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                                {% elif i > problems.number|add:'-3' and i < problems.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if difficulty_filter %}&difficulty={{ difficulty_filter }}{% endif %}{% if solved_filter %}&solved={{ solved_filter }}{% endif %}">{{ i }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if problems.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ problems.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if difficulty_filter %}&difficulty={{ difficulty_filter }}{% endif %}{% if solved_filter %}&solved={{ solved_filter }}{% endif %}" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ problems.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if difficulty_filter %}&difficulty={{ difficulty_filter }}{% endif %}{% if solved_filter %}&solved={{ solved_filter }}{% endif %}" aria-label="Last">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" aria-label="Last">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-5 text-center">
+                    <i class="fas fa-puzzle-piece fa-4x mb-3 text-muted"></i>
+                    {% if search_query or category_filter or difficulty_filter or solved_filter %}
+                        <h4>No problems found with your filters</h4>
+                        <p class="mb-4">Try changing your search criteria or remove some filters</p>
+                        <a href="{% url 'crypto_force_app:problem_list' %}" class="btn btn-primary">
+                            <i class="fas fa-sync-alt me-1"></i>Clear All Filters
+                        </a>
+                    {% else %}
+                        <h4>No problems available yet</h4>
+                        <p class="mb-0">Check back later for challenges!</p>
+                        {% if user.is_staff or user.is_problem_setter %}
+                            <div class="mt-3">
+                                <a href="{% url 'crypto_force_app:create_problem' %}" class="btn btn-success">
+                                    <i class="fas fa-plus me-1"></i>Create Problem
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

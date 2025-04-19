@@ -1,0 +1,136 @@
+/* Main styling for CryptoForce */
+
+/* Custom variables */
+:root {
+    --primary-color: #4e73df;
+    --secondary-color: #6c757d;
+    --success-color: #1cc88a;
+    --info-color: #36b9cc;
+    --warning-color: #f6c23e;
+    --danger-color: #e74a3b;
+    --light-color: #f8f9fc;
+    --dark-color: #224abe;
+}
+
+/* Global styles */
+body {
+    background-color: #f8f9fc;
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Navbar customization */
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+/* Card shadows */
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Rank badges */
+.rank-badge {
+    padding: 0.35em 0.65em;
+    border-radius: 0.25rem;
+    color: white;
+    font-weight: 600;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+/* ELO chart styling */
+.elo-chart-container {
+    height: 300px;
+    margin-bottom: 20px;
+}
+
+/* Problem difficulty indicators */
+.difficulty-easy {
+    color: var(--success-color);
+}
+
+.difficulty-medium {
+    color: var(--warning-color);
+}
+
+.difficulty-hard {
+    color: var(--danger-color);
+}
+
+.difficulty-expert {
+    color: var(--dark-color);
+}
+
+/* Avatar containers */
+.avatar-container {
+    width: 150px;
+    height: 150px;
+    overflow: hidden;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    border: 3px solid var(--primary-color);
+}
+
+.avatar-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Contest cards */
+.contest-card {
+    border-left: 4px solid var(--primary-color);
+}
+
+.contest-card.ongoing {
+    border-left-color: var(--success-color);
+}
+
+.contest-card.upcoming {
+    border-left-color: var(--info-color);
+}
+
+.contest-card.finished {
+    border-left-color: var(--secondary-color);
+}
+
+/* Custom buttons */
+.btn-solve {
+    background-color: var(--dark-color);
+    color: white;
+}
+
+.btn-solve:hover {
+    background-color: #1a3a9c;
+    color: white;
+}
+
+/* Timer styling */
+.countdown-timer {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+/* Footer styling */
+footer a:hover {
+    opacity: 0.8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .hide-on-mobile {
+        display: none;
+    }
+    
+    .elo-chart-container {
+        height: 200px;
+    }
+}
