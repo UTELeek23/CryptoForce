@@ -194,7 +194,7 @@ def change_password_view(request):
     
     return render(request, 'accounts/change_password.html', {'form': form})
 
-@login_required
+@login_required(login_url='crypto_force_app:login')
 def problem_list_view(request):
     """View for listing all problems with filtering options"""
     # Get all problems
@@ -266,7 +266,7 @@ def problem_list_view(request):
     
     return render(request, 'problems/problem_list.html', context)
 
-@login_required
+@login_required(login_url='crypto_force_app:login')
 def problem_detail_view(request, problem_id):
     """View for displaying problem details and accepting submissions"""
     problem = get_object_or_404(Problem, id=problem_id, is_active=True)
@@ -447,7 +447,7 @@ def delete_problem_view(request, problem_id):
     
     return redirect('crypto_force_app:problem_detail', problem_id=problem_id)
 
-@login_required
+@login_required(login_url='crypto_force_app:login')
 def leaderboard_view(request):
     """View for displaying the leaderboard of users by ELO rating"""
     # Start with all users

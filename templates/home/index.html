@@ -18,7 +18,7 @@
                 {% else %}
                 <div class="d-flex justify-content-center gap-3">
                     <a href="#contests" class="btn btn-primary btn-lg">Ongoing Contests</a>
-                    <a href="#problems" class="btn btn-outline-secondary btn-lg">Practice Problems</a>
+                    <a href="{% url 'crypto_force_app:problem_list' %}" class="btn btn-outline-secondary btn-lg">Practice Problems</a>
                 </div>
                 {% endif %}
             </div>
