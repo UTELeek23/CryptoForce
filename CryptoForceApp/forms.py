@@ -2,7 +2,26 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.core.validators import MinValueValidator, MaxValueValidator
 from .models import User, Problem, Submission
-from tinymce.widgets import TinyMCE
+from ckeditor_uploader.fields import RichTextUploadingField
+from ckeditor.widgets import CKEditorWidget
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            result = [single_file_clean(d, initial) for d in data]
+        else:
+            result = [single_file_clean(data, initial)]
+        return result
 
 class LoginForm(AuthenticationForm):
     """Form for user login"""
@@ -127,7 +146,12 @@ class ProblemForm(forms.ModelForm):
     
     description = forms.CharField(
         required=True,
-        widget=TinyMCE()
+        # Thay thế widget TinyMCE() bằng Textarea thông thường
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'placeholder': 'Problem Description',
+            'rows': 6
+        })
     )
     
     difficulty = forms.IntegerField(
@@ -196,9 +220,14 @@ class ProblemForm(forms.ModelForm):
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
 
+    attachment = forms.FileField(
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+    )
+
     class Meta:
         model = Problem
-        fields = ('title', 'description', 'difficulty', 'difficulty_level', 'points', 'flag', 'category', 'solution', 'is_active')
+        fields = ('title', 'description', 'difficulty', 'difficulty_level', 'points', 'flag', 'category', 'solution', 'is_active', 'attachment')
 
     def clean_flag(self):
         flag = self.cleaned_data.get('flag')

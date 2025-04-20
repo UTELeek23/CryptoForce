@@ -37,8 +37,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'CryptoForceApp.apps.CryptoforceappConfig',
-    'ckeditor',
-    'ckeditor_uploader',
 ]
 
 MIDDLEWARE = [
@@ -135,72 +133,3 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom user model
 AUTH_USER_MODEL = 'CryptoForceApp.User'
 
-# CKEditor Configuration
-CKEDITOR_UPLOAD_PATH = "uploads/"
-CKEDITOR_IMAGE_BACKEND = "pillow"
-CKEDITOR_JQUERY_URL = "https://code.jquery.com/jquery-3.6.4.min.js"
-CKEDITOR_CONFIGS = {
-    'default': {
-        'skin': 'moono-lisa',
-        'toolbar_Basic': [
-            ['Source', '-', 'Bold', 'Italic']
-        ],
-        'toolbar_Full': [
-            ['Styles', 'Format', 'Bold', 'Italic', 'Underline', 'Strike', 'SpellChecker', 'Undo', 'Redo'],
-            ['Link', 'Unlink', 'Anchor'],
-            ['Image', 'Table', 'HorizontalRule'],
-            ['TextColor', 'BGColor'],
-            ['Smiley', 'SpecialChar'], ['Source'],
-        ],
-        'toolbar': 'Full',
-        'height': 300,
-        'width': 'full',
-        'filebrowserWindowWidth': 940,
-        'filebrowserWindowHeight': 725,
-        'extraPlugins': ','.join([
-            'codesnippet',
-            'uploadimage',
-            'uploadwidget',
-            'widget',
-            'lineutils',
-        ]),
-        'codeSnippet_theme': 'monokai_sublime',
-    },
-    'problem_description': {
-        'skin': 'moono-lisa',
-        'toolbar': [
-            {'name': 'document', 'items': ['Source', '-', 'Save', 'NewPage', 'Preview', 'Print', '-', 'Templates']},
-            {'name': 'clipboard', 'items': ['Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo']},
-            {'name': 'editing', 'items': ['Find', 'Replace', '-', 'SelectAll']},
-            {'name': 'forms',
-             'items': ['Form', 'Checkbox', 'Radio', 'TextField', 'Textarea', 'Select', 'Button', 'ImageButton',
-                       'HiddenField']},
-            '/',
-            {'name': 'basicstyles',
-             'items': ['Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'RemoveFormat']},
-            {'name': 'paragraph',
-             'items': ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-',
-                       'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', '-', 'BidiLtr', 'BidiRtl',
-                       'Language']},
-            {'name': 'links', 'items': ['Link', 'Unlink', 'Anchor']},
-            {'name': 'insert',
-             'items': ['Image', 'Flash', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar', 'PageBreak', 'Iframe']},
-            '/',
-            {'name': 'styles', 'items': ['Styles', 'Format', 'Font', 'FontSize']},
-            {'name': 'colors', 'items': ['TextColor', 'BGColor']},
-            {'name': 'tools', 'items': ['Maximize', 'ShowBlocks']},
-            {'name': 'about', 'items': ['About']},
-            {'name': 'code', 'items': ['CodeSnippet']},
-        ],
-        'height': 400,
-        'width': 'full',
-        'extraPlugins': ','.join([
-            'codesnippet',
-            'uploadimage',
-            'uploadwidget',
-            'widget',
-            'lineutils',
-        ]),
-        'codeSnippet_theme': 'monokai_sublime',
-    }
-}

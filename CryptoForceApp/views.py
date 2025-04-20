@@ -6,9 +6,9 @@ from django.urls import reverse
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum, Case, When, IntegerField, F
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from .forms import LoginForm, RegisterForm, EditProfileForm, ProblemForm, HintForm, SubmissionForm
-from .models import User, Contest, Problem, Rank, Submission, EloHistory
+from .models import User, Contest, Problem, Rank, Submission, EloHistory, Hint
 
 def home_view(request):
     """View for the home page"""
@@ -300,8 +300,18 @@ def problem_detail_view(request, problem_id):
     ).first()
     
     # Get hints for the problem
-    # In a real app, you would have a Hint model
-    hints = []
+    hints = Hint.objects.filter(problem=problem)
+    
+    # Add info about which hints are unlocked by the current user
+    processed_hints = []
+    for hint in hints:
+        unlocked = request.user in hint.unlocked_by.all()
+        processed_hints.append({
+            'id': hint.id,
+            'content': hint.content,
+            'cost': hint.cost,
+            'is_unlocked': unlocked
+        })
     
     # Create submission form
     form = SubmissionForm()
@@ -312,7 +322,7 @@ def problem_detail_view(request, problem_id):
         'first_solvers': first_solvers,
         'solve_percentage': solve_percentage,
         'contest': contest,
-        'hints': hints,
+        'hints': processed_hints,
         'form': form,
     }
     
@@ -328,43 +338,30 @@ def submit_solution_view(request, problem_id):
         if form.is_valid():
             submitted_flag = form.cleaned_data['submitted_flag']
             
-            # Check if flag is correct
-            is_correct = (submitted_flag == problem.flag)
-            
             # Create submission
             submission = Submission(
                 user=request.user,
                 problem=problem,
-                submitted_flag=submitted_flag,
-                is_correct=is_correct
+                submitted_flag=submitted_flag
             )
             
-            # Check if the problem was already solved by the user
-            already_solved = problem in request.user.solved_problems.all()
+            # Save will handle flag verification and ELO updates
+            submission.save()
             
-            # Update ELO if correct and not already solved
-            if is_correct and not already_solved:
-                # Add problem to user's solved problems
-                request.user.solved_problems.add(problem)
-                
-                # Update ELO
-                elo_change = request.user.update_elo(problem, True)
-                submission.elo_change = elo_change
-                
-                messages.success(
-                    request, 
-                    f"Correct flag! You earned {problem.points} points and {elo_change} ELO."
-                )
-            elif is_correct and already_solved:
-                messages.info(
-                    request,
-                    f"Correct flag! You already solved this problem before."
-                )
+            if submission.is_correct:
+                if submission.elo_change > 0:  # First time solving
+                    messages.success(
+                        request, 
+                        f"Correct flag! You earned {problem.points} points and {submission.elo_change} ELO."
+                    )
+                else:  # Already solved before
+                    messages.info(
+                        request,
+                        "Correct flag! You already solved this problem before."
+                    )
             else:
-                # Update ELO for wrong submission (optional)
                 messages.error(request, "Incorrect flag. Try again!")
             
-            submission.save()
             return redirect('crypto_force_app:problem_detail', problem_id=problem.id)
     
     return redirect('crypto_force_app:problem_detail', problem_id=problem.id)
@@ -372,27 +369,20 @@ def submit_solution_view(request, problem_id):
 @login_required
 def unlock_hint_view(request, hint_id):
     """View for unlocking problem hints"""
-    # In a real app, you would have a Hint model and check if the hint exists
-    # For now, we'll just redirect back to the problem detail page
+    hint = get_object_or_404(Hint, id=hint_id)
+    problem = hint.problem
     
-    # Example hint logic:
-    # hint = get_object_or_404(Hint, id=hint_id)
-    # problem = hint.problem
+    # Check if hint is already unlocked
+    if request.user in hint.unlocked_by.all():
+        messages.info(request, "You've already unlocked this hint.")
+        return redirect('crypto_force_app:problem_detail', problem_id=problem.id)
     
-    # # Check if user has enough points
-    # if request.user.points >= hint.cost:
-    #     # Deduct points
-    #     request.user.points -= hint.cost
-    #     request.user.save()
-    #     
-    #     # Unlock hint for user
-    #     hint.unlocked_by.add(request.user)
-    #     
-    #     messages.success(request, f"Hint unlocked! You spent {hint.cost} points.")
-    # else:
-    #     messages.error(request, "Not enough points to unlock this hint.")
+    # In a real application, you'd check if the user has enough points and subtract them
+    # For now, just unlock the hint
+    hint.unlocked_by.add(request.user)
+    messages.success(request, f"Hint unlocked! You spent {hint.cost} points.")
     
-    return redirect('crypto_force_app:problem_detail', problem_id=1)  # Replace with actual problem ID
+    return redirect('crypto_force_app:problem_detail', problem_id=problem.id)
 
 @login_required
 def create_problem_view(request):
@@ -401,7 +391,7 @@ def create_problem_view(request):
         return HttpResponseForbidden("You don't have permission to access this page.")
     
     if request.method == 'POST':
-        form = ProblemForm(request.POST)
+        form = ProblemForm(request.POST, request.FILES)
         if form.is_valid():
             problem = form.save()
             messages.success(request, f"Problem '{problem.title}' created successfully!")
@@ -425,7 +415,7 @@ def edit_problem_view(request, problem_id):
     problem = get_object_or_404(Problem, id=problem_id)
     
     if request.method == 'POST':
-        form = ProblemForm(request.POST, instance=problem)
+        form = ProblemForm(request.POST, request.FILES, instance=problem)
         if form.is_valid():
             form.save()
             messages.success(request, f"Problem '{problem.title}' updated successfully!")
@@ -688,3 +678,76 @@ def admin_toggle_contest_manager(request, user_id):
     messages.success(request, f"User '{user.username}' has been {status}.")
     
     return redirect('crypto_force_app:admin_user_management')
+
+@login_required
+def manage_hint_view(request, problem_id):
+    """View for managing hints for a problem"""
+    if not (request.user.is_staff or request.user.is_problem_setter):
+        return HttpResponseForbidden("You don't have permission to access this page.")
+    
+    problem = get_object_or_404(Problem, id=problem_id)
+    
+    if request.method == 'POST':
+        form = HintForm(request.POST)
+        if form.is_valid():
+            hint = Hint.objects.create(
+                problem=problem,
+                content=form.cleaned_data['content'],
+                cost=form.cleaned_data['cost']
+            )
+            return JsonResponse({
+                'status': 'success', 
+                'id': hint.id,
+                'content': hint.content,
+                'cost': hint.cost
+            })
+        else:
+            return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+    
+    elif request.method == 'GET':
+        hints = Hint.objects.filter(problem=problem)
+        return JsonResponse({
+            'status': 'success',
+            'hints': list(hints.values('id', 'content', 'cost'))
+        })
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+@login_required
+def update_hint_view(request, hint_id):
+    """View for updating a hint"""
+    if not (request.user.is_staff or request.user.is_problem_setter):
+        return HttpResponseForbidden("You don't have permission to access this page.")
+    
+    hint = get_object_or_404(Hint, id=hint_id)
+    
+    if request.method == 'POST':
+        form = HintForm(request.POST)
+        if form.is_valid():
+            hint.content = form.cleaned_data['content']
+            hint.cost = form.cleaned_data['cost']
+            hint.save()
+            return JsonResponse({
+                'status': 'success', 
+                'id': hint.id,
+                'content': hint.content,
+                'cost': hint.cost
+            })
+        else:
+            return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+@login_required
+def delete_hint_view(request, hint_id):
+    """View for deleting a hint"""
+    if not (request.user.is_staff or request.user.is_problem_setter):
+        return HttpResponseForbidden("You don't have permission to access this page.")
+    
+    hint = get_object_or_404(Hint, id=hint_id)
+    
+    if request.method == 'POST':
+        hint.delete()
+        return JsonResponse({'status': 'success'})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)

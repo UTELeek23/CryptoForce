@@ -162,12 +162,16 @@
                         
                         <!-- File attachments would go here -->
                         <div class="mb-3">
-                            <label class="form-label">Attachments</label>
-                            <div class="alert alert-info" role="alert">
-                                <i class="fas fa-info-circle me-2"></i>
-                                File attachment functionality will be added soon. For now, please include any necessary files as links in the description.
-                            </div>
+                            <label for="{{ form.attachment.id_for_label }}" class="form-label">File Attachment</label>
+                            {{ form.attachment }}
+                            <div class="form-text">Upload only *.zip or *.rar</div>
+                            {% if form.attachment.errors %}
+                                <div class="text-danger mt-1">
+                                    {{ form.attachment.errors }}
+                                </div>
+                            {% endif %}
                         </div>
+                        
                     </div>
                     
                     <!-- Solution & Flag -->
@@ -262,34 +266,45 @@
                 <h5 class="m-0 fw-bold">Hints Management</h5>
             </div>
             <div class="card-body">
-                <div class="alert alert-info" role="alert">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Hint management will be implemented soon. After creating the problem, you'll be able to add hints.
-                </div>
-                
                 {% if action == 'Edit' %}
-                    <!-- Placeholder for future hint management -->
                     <div id="hintsContainer">
-                        <!-- Hints would be listed here -->
+                        <!-- Hint list will be loaded here dynamically -->
+                        <div class="text-center py-3" id="loadingHints">
+                            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-muted"></i>
+                            <p class="mb-0">Loading hints...</p>
+                        </div>
+                        <div class="d-none" id="noHintsMessage">
+                            <div class="text-center py-3">
+                                <i class="fas fa-info-circle fa-2x mb-3 text-muted"></i>
+                                <p class="mb-0">No hints added yet</p>
+                            </div>
+                        </div>
+                        <div class="d-none" id="hintsList">
+                            <!-- Hints will be inserted here -->
+                        </div>
                     </div>
                     
-                    <!-- Placeholder for future hint form -->
-                    <form id="hintForm" class="mt-3 d-none">
+                    <form id="hintForm" class="mt-4 border-top pt-4">
+                        <h6 class="mb-3">Add New Hint</h6>
                         <div class="mb-3">
                             <label class="form-label">Hint Content</label>
-                            <textarea class="form-control" rows="3" placeholder="Enter hint content..."></textarea>
+                            <textarea class="form-control" name="content" rows="3" placeholder="Enter hint content..." required></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Point Cost</label>
-                            <input type="number" class="form-control" placeholder="10" min="0" max="100">
+                            <input type="number" class="form-control" name="cost" placeholder="10" min="0" max="100" value="10" required>
                             <div class="form-text">Cost for users to unlock this hint</div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Add Hint</button>
+                        <button type="submit" class="btn btn-primary" id="addHintBtn">
+                            <i class="fas fa-plus me-1"></i>Add Hint
+                        </button>
+                        <div class="alert alert-danger mt-3 d-none" id="hintFormError"></div>
                     </form>
                 {% else %}
-                    <p class="text-muted small">
-                        You'll be able to add hints after creating the problem.
-                    </p>
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Hints can be added after creating the problem.
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -319,5 +334,268 @@
         </div>
     </div>
 </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if action == 'Edit' %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const problemId = {{ problem.id }};
+        const hintsContainer = document.getElementById('hintsContainer');
+        const loadingHints = document.getElementById('loadingHints');
+        const noHintsMessage = document.getElementById('noHintsMessage');
+        const hintsList = document.getElementById('hintsList');
+        const hintForm = document.getElementById('hintForm');
+        const hintFormError = document.getElementById('hintFormError');
+        
+        // Load existing hints
+        loadHints();
+        
+        // Function to load hints
+        function loadHints() {
+            fetch(`/problems/${problemId}/hints/`)
+                .then(response => response.json())
+                .then(data => {
+                    loadingHints.classList.add('d-none');
+                    
+                    if (data.status === 'success') {
+                        if (data.hints.length === 0) {
+                            noHintsMessage.classList.remove('d-none');
+                        } else {
+                            hintsList.classList.remove('d-none');
+                            renderHints(data.hints);
+                        }
+                    } else {
+                        showError('Failed to load hints. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    loadingHints.classList.add('d-none');
+                    showError('Error loading hints: ' + error.message);
+                });
+        }
+        
+        // Function to render hints
+        function renderHints(hints) {
+            hintsList.innerHTML = '';
+            
+            hints.forEach(hint => {
+                const hintElement = document.createElement('div');
+                hintElement.className = 'hint-card p-3 mb-3 bg-light';
+                hintElement.dataset.hintId = hint.id;
+                
+                hintElement.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="mb-1">
+                                <i class="fas fa-lightbulb me-2 text-warning"></i>
+                                Hint
+                            </h6>
+                            <span class="badge bg-info">${hint.cost} points</span>
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-primary edit-hint-btn">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-hint-btn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="hint-content mb-2">${hint.content}</div>
+                    <div class="edit-hint-form d-none">
+                        <form class="update-hint-form">
+                            <div class="mb-2">
+                                <textarea class="form-control" name="content" rows="2" required>${hint.content}</textarea>
+                            </div>
+                            <div class="mb-2">
+                                <div class="input-group">
+                                    <span class="input-group-text">Cost</span>
+                                    <input type="number" class="form-control" name="cost" value="${hint.cost}" min="0" max="100" required>
+                                    <span class="input-group-text">points</span>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                <button type="button" class="btn btn-sm btn-secondary cancel-edit-btn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+                
+                hintsList.appendChild(hintElement);
+                
+                // Add event listeners for edit and delete buttons
+                const editBtn = hintElement.querySelector('.edit-hint-btn');
+                const deleteBtn = hintElement.querySelector('.delete-hint-btn');
+                const cancelEditBtn = hintElement.querySelector('.cancel-edit-btn');
+                const updateForm = hintElement.querySelector('.update-hint-form');
+                
+                editBtn.addEventListener('click', function() {
+                    hintElement.querySelector('.hint-content').classList.add('d-none');
+                    hintElement.querySelector('.edit-hint-form').classList.remove('d-none');
+                    editBtn.classList.add('d-none');
+                    deleteBtn.classList.add('d-none');
+                });
+                
+                cancelEditBtn.addEventListener('click', function() {
+                    hintElement.querySelector('.hint-content').classList.remove('d-none');
+                    hintElement.querySelector('.edit-hint-form').classList.add('d-none');
+                    editBtn.classList.remove('d-none');
+                    deleteBtn.classList.remove('d-none');
+                });
+                
+                updateForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const formData = new FormData(updateForm);
+                    updateHint(hint.id, formData, hintElement);
+                });
+                
+                deleteBtn.addEventListener('click', function() {
+                    if (confirm('Are you sure you want to delete this hint?')) {
+                        deleteHint(hint.id, hintElement);
+                    }
+                });
+            });
+        }
+        
+        // Function to add new hint
+        hintForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(hintForm);
+            
+            // Show loading state
+            const addHintBtn = document.getElementById('addHintBtn');
+            const originalBtnText = addHintBtn.innerHTML;
+            addHintBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Adding...';
+            addHintBtn.disabled = true;
+            
+            fetch(`/problems/${problemId}/hints/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset button state
+                addHintBtn.innerHTML = originalBtnText;
+                addHintBtn.disabled = false;
+                
+                if (data.status === 'success') {
+                    // Reset form
+                    hintForm.reset();
+                    hintFormError.classList.add('d-none');
+                    
+                    // Add new hint to the list
+                    noHintsMessage.classList.add('d-none');
+                    hintsList.classList.remove('d-none');
+                    
+                    // Reload hints
+                    loadHints();
+                } else {
+                    showFormError(data.errors || 'Failed to add hint');
+                }
+            })
+            .catch(error => {
+                addHintBtn.innerHTML = originalBtnText;
+                addHintBtn.disabled = false;
+                showFormError('Error adding hint: ' + error.message);
+            });
+        });
+        
+        // Function to update a hint
+        function updateHint(hintId, formData, hintElement) {
+            const updateBtn = hintElement.querySelector('button[type="submit"]');
+            const originalBtnText = updateBtn.innerHTML;
+            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            updateBtn.disabled = true;
+            
+            fetch(`/hints/${hintId}/update/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateBtn.innerHTML = originalBtnText;
+                updateBtn.disabled = false;
+                
+                if (data.status === 'success') {
+                    // Update the hint content
+                    hintElement.querySelector('.hint-content').textContent = data.content;
+                    hintElement.querySelector('.badge').textContent = data.cost + ' points';
+                    
+                    // Toggle visibility
+                    hintElement.querySelector('.hint-content').classList.remove('d-none');
+                    hintElement.querySelector('.edit-hint-form').classList.add('d-none');
+                    hintElement.querySelector('.edit-hint-btn').classList.remove('d-none');
+                    hintElement.querySelector('.delete-hint-btn').classList.remove('d-none');
+                } else {
+                    alert('Failed to update hint: ' + (data.errors || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                updateBtn.innerHTML = originalBtnText;
+                updateBtn.disabled = false;
+                alert('Error updating hint: ' + error.message);
+            });
+        }
+        
+        // Function to delete a hint
+        function deleteHint(hintId, hintElement) {
+            fetch(`/hints/${hintId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Remove the hint from the DOM
+                    hintElement.remove();
+                    
+                    // Show "no hints" message if no hints left
+                    if (hintsList.children.length === 0) {
+                        hintsList.classList.add('d-none');
+                        noHintsMessage.classList.remove('d-none');
+                    }
+                } else {
+                    alert('Failed to delete hint');
+                }
+            })
+            .catch(error => {
+                alert('Error deleting hint: ' + error.message);
+            });
+        }
+        
+        // Helper function to show form error
+        function showFormError(message) {
+            hintFormError.textContent = message;
+            hintFormError.classList.remove('d-none');
+        }
+        
+        // Helper function to get CSRF token cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
 {% endif %}
 {% endblock %}

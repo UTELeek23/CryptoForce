@@ -32,6 +32,11 @@ urlpatterns = [
     path('problems/<int:problem_id>/submit/', views.submit_solution_view, name='submit_solution'),
     path('problems/<int:problem_id>/', views.problem_detail_view, name='problem_detail'),
     path('problems/', views.problem_list_view, name='problem_list'),
+    
+    # Hint URLs
+    path('problems/<int:problem_id>/hints/', views.manage_hint_view, name='manage_hints'),
+    path('hints/<int:hint_id>/update/', views.update_hint_view, name='update_hint'),
+    path('hints/<int:hint_id>/delete/', views.delete_hint_view, name='delete_hint'),
     path('hints/<int:hint_id>/unlock/', views.unlock_hint_view, name='unlock_hint'),
     
     # Leaderboard

@@ -1,5 +1,6 @@
 {% extends 'base/base.html' %}
 {% load static %}
+{% load crypto_force_tags %}
 
 {% block title %}{{ problem.title }} - CryptoForce{% endblock %}
 
@@ -107,6 +108,17 @@
                 <div class="description-content">
                     {{ problem.description|safe }}
                 </div>
+                
+                {% if problem.attachment %}
+                    <div class="mt-4">
+                        <h6 class="mb-3">Attachment</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{{ problem.attachment.url }}" class="btn btn-outline-secondary" download>
+                                <i class="fas fa-download me-2"></i>{{ problem.attachment.name|split:"/"|last }}
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
                 
                 {% if attachments %}
                     <div class="mt-4">
@@ -217,7 +229,7 @@
                                     <h2 class="mb-0">
                                         <button class="btn btn-link btn-block text-left text-decoration-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHint{{ forloop.counter }}" aria-expanded="false" aria-controls="collapseHint{{ forloop.counter }}">
                                             <i class="fas fa-lightbulb me-2"></i>Hint #{{ forloop.counter }}
-                                            {% if hint.cost > 0 %}
+                                            {% if not hint.is_unlocked %}
                                                 <span class="badge bg-warning text-dark">-{{ hint.cost }} points</span>
                                             {% endif %}
                                         </button>
@@ -229,7 +241,7 @@
                                             {{ hint.content|safe }}
                                         {% else %}
                                             <div class="text-center">
-                                                <p>This hint will cost you {{ hint.cost }} points. Your current score will be reduced by this amount.</p>
+                                                <p>This hint will cost you {{ hint.cost }} points.</p>
                                                 <form method="post" action="{% url 'crypto_force_app:unlock_hint' hint.id %}">
                                                     {% csrf_token %}
                                                     <button type="submit" class="btn btn-sm btn-warning">

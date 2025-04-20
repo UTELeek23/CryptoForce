@@ -185,12 +185,23 @@ class Problem(models.Model):
     solution = models.TextField(blank=True, null=True)  # Admin solution or writeup
     flag = models.CharField(max_length=255)  # The answer/flag for the problem
     category = models.CharField(max_length=100)  # e.g., Cryptography, Web Exploitation, etc.
+    attachment = models.FileField(upload_to='problem_files/', blank=True, null=True)
     
     def get_solve_count(self):
-        return self.submissions.filter(is_correct=True).count()
+        """Return the number of unique users who have solved this problem"""
+        return self.solved_by.count()
     
     def __str__(self):
         return self.title
+
+class Hint(models.Model):
+    problem = models.ForeignKey(Problem, on_delete=models.CASCADE, related_name='hints')
+    content = models.TextField()
+    cost = models.IntegerField(default=10)
+    unlocked_by = models.ManyToManyField(User, related_name='unlocked_hints', blank=True)
+    
+    def __str__(self):
+        return f"Hint for {self.problem.title}"
 
 class Submission(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='submissions')
@@ -208,20 +219,20 @@ class Submission(models.Model):
         # Only calculate ELO if this is a new submission
         is_new = self.pk is None
         
+        # Check if user has already solved this problem
+        already_solved = self.problem in self.user.solved_problems.all()
+        
         super(Submission, self).save(*args, **kwargs)
         
         # Update user's ELO after saving if this is a new submission
-        if is_new:
+        if is_new and self.is_correct and not already_solved:
             # Only update ELO if the contest is rated or if it's outside a contest
             contest_is_rated = self.contest is None or (self.contest and self.contest.is_rated)
             if contest_is_rated:
                 self.elo_change = self.user.update_elo(self.problem, self.is_correct)
+                self.user.solved_problems.add(self.problem)
                 self.save()  # Save again to store the ELO change
                 
-                # Add problem to solved problems if correct
-                if self.is_correct:
-                    self.user.solved_problems.add(self.problem)
-    
     def __str__(self):
         return f"{self.user.username}'s submission for {self.problem.title}"
 

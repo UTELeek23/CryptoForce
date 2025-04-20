@@ -67,32 +67,36 @@
             <div class="card-body">
                 {% if top_users %}
                     <div class="list-group list-group-flush">
+                        {% with rank_counter=0 %}
                         {% for user in top_users %}
                             {% if not user.is_staff %}
-                            <div class="list-group-item px-0 py-3 border-0 border-bottom d-flex align-items-center">
-                                <div class="me-3 text-center" style="width: 30px">
-                                    <span class="fw-bold">{{ forloop.counter }}</span>
-                                </div>
-                                <div class="d-flex align-items-center flex-grow-1">
-                                    {% if user.avatar %}
-                                        <img src="{{ user.avatar.url }}" alt="{{ user.username }}" class="rounded-circle me-2" style="width: 36px; height: 36px; object-fit: cover;">
-                                    {% else %}
-                                        <div class="rounded-circle bg-secondary text-white me-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px">
-                                            <i class="fas fa-user"></i>
+                                {% with rank_counter=rank_counter|add:1 %}
+                                <div class="list-group-item px-0 py-3 border-0 border-bottom d-flex align-items-center">
+                                    <div class="me-3 text-center" style="width: 30px">
+                                        <span class="fw-bold">{{ rank_counter }}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center flex-grow-1">
+                                        {% if user.avatar %}
+                                            <img src="{{ user.avatar.url }}" alt="{{ user.username }}" class="rounded-circle me-2" style="width: 36px; height: 36px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="rounded-circle bg-secondary text-white me-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-semibold">{{ user.username }}</div>
+                                            <div class="small text-muted">{{ user.country }}</div>
                                         </div>
-                                    {% endif %}
-                                    <div>
-                                        <div class="fw-semibold">{{ user.username }}</div>
-                                        <div class="small text-muted">{{ user.country }}</div>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <span class="badge" style="background-color: {{ user.rank.color_code }}">{{ user.rank.name }}</span>
+                                        <div class="fw-bold">{{ user.elo }}</div>
                                     </div>
                                 </div>
-                                <div class="ms-auto">
-                                    <span class="badge" style="background-color: {{ user.rank.color_code }}">{{ user.rank.name }}</span>
-                                    <div class="fw-bold">{{ user.elo }}</div>
-                                </div>
-                            </div>
+                                {% endwith %}
                             {% endif %}
                         {% endfor %}
+                        {% endwith %}
                     </div>
                 {% else %}
                     <div class="text-center py-4">
@@ -142,7 +146,7 @@
                                         <td>{{ problem.get_solve_count }}</td>
                                         <td>{{ problem.points }}</td>
                                         <td>
-                                            <a href="#problem/{{ problem.id }}" class="btn btn-sm btn-outline-primary">Solve</a>
+                                            <a href="{% url 'crypto_force_app:problem_detail' problem.id %}" class="btn btn-sm btn-outline-primary">Solve</a>
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -157,7 +161,7 @@
                 {% endif %}
             </div>
             <div class="card-footer bg-white">
-                <a href="#problems" class="btn btn-outline-info w-100">Browse All Problems</a>
+                <a href="{% url 'crypto_force_app:problem_list' %}" class="btn btn-outline-info w-100">Browse All Problems</a>
             </div>
         </div>
     </div>
